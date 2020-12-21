@@ -888,8 +888,13 @@ ConstrainedBlackBoxControlDiscreteSystem{typeof(f),BallInf{Float64,Array{Float64
 macro system(expr...)
     try
         dyn_eq, AT, constr, state, input, noise, dim, x0 = _parse_system(expr)
-        sys_type, var_names = _get_system_type(dyn_eq, AT, constr, state, input, noise, dim)
-        sys = Expr(:call, :($sys_type), :($(var_names...)))
+        if @capture(expr[1], (M_*x_'' + C_*x_' + K_*x_ = 0))
+            variableNames = :(M, C, K)
+            sys = Expr(:call, SecondOrderLinearContinuousSystem, :($variableNames...))
+        else
+            sys_type, var_names = _get_system_type(dyn_eq, AT, constr, state, input, noise, dim)
+            sys = Expr(:call, :($sys_type), :($(var_names...)))
+        end
         if x0 == nothing
             return esc(sys)
         else
@@ -904,6 +909,8 @@ macro system(expr...)
         end
     end
 end
+
+
 
 """
     ivp(expr...)
